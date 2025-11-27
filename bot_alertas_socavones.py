@@ -1,8 +1,7 @@
 import os
 import logging
-import requests
 from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, ConversationHandler
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler
 
 # Configuración de logging
 logging.basicConfig(
@@ -108,7 +107,7 @@ def calcular_riesgo_socavones(respuestas):
 
 # ========== COMANDOS DEL BOT ==========
 
-def comando_inicio(update: Update, context: CallbackContext):
+async def comando_inicio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Maneja el comando /start"""
     teclado_principal = [
         ['📊 Calcular Riesgo', '📞 Números Emergencia'],
@@ -131,13 +130,13 @@ def comando_inicio(update: Update, context: CallbackContext):
 *Selecciona una opción del menú:*
 """
     
-    update.message.reply_text(
+    await update.message.reply_text(
         mensaje_bienvenida,
         reply_markup=marcador_teclado,
         parse_mode='Markdown'
     )
 
-def iniciar_calculo_riesgo(update: Update, context: CallbackContext):
+async def iniciar_calculo_riesgo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Inicia el proceso de cálculo de riesgo"""
     preguntas_riesgo = [
         "¿Ha notado GRIETAS en el suelo o paredes? (sí/no)",
@@ -151,7 +150,7 @@ def iniciar_calculo_riesgo(update: Update, context: CallbackContext):
     context.user_data['respuestas_riesgo'] = []
     context.user_data['pregunta_actual'] = 0
     
-    update.message.reply_text(
+    await update.message.reply_text(
         "📊 **EVALUACIÓN DE RIESGO DE SOCAVONES**\n\n"
         "Responda las siguientes 4 preguntas con SÍ o NO:\n\n"
         f"*Pregunta 1:* {preguntas_riesgo[0]}",
@@ -160,7 +159,7 @@ def iniciar_calculo_riesgo(update: Update, context: CallbackContext):
     
     return CALCULANDO_RIESGO
 
-def procesar_respuesta_riesgo(update: Update, context: CallbackContext):
+async def procesar_respuesta_riesgo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Procesa cada respuesta del cálculo de riesgo"""
     respuesta_usuario = update.message.text
     preguntas = context.user_data['preguntas_riesgo']
@@ -169,7 +168,7 @@ def procesar_respuesta_riesgo(update: Update, context: CallbackContext):
     
     # Validar respuesta
     if respuesta_usuario.lower() not in ['sí', 'si', 's', 'no', 'n', 'yes', 'y']:
-        update.message.reply_text("⚠️ Por favor responda con SÍ o NO")
+        await update.message.reply_text("⚠️ Por favor responda con SÍ o NO")
         return CALCULANDO_RIESGO
     
     respuestas.append(respuesta_usuario)
@@ -179,7 +178,7 @@ def procesar_respuesta_riesgo(update: Update, context: CallbackContext):
         # Siguiente pregunta
         context.user_data['pregunta_actual'] = num_pregunta
         context.user_data['respuestas_riesgo'] = respuestas
-        update.message.reply_text(
+        await update.message.reply_text(
             f"*Pregunta {num_pregunta + 1}:* {preguntas[num_pregunta]}",
             parse_mode='Markdown'
         )
@@ -199,15 +198,15 @@ def procesar_respuesta_riesgo(update: Update, context: CallbackContext):
         for accion in resultado['acciones']:
             mensaje_resultado += f"{accion}\n"
         
-        update.message.reply_text(mensaje_resultado, parse_mode='Markdown')
+        await update.message.reply_text(mensaje_resultado, parse_mode='Markdown')
         
         # Si es alto riesgo, mostrar números de emergencia automáticamente
         if "ALTO" in resultado['nivel']:
-            mostrar_numeros_emergencia(update, context)
+            await mostrar_numeros_emergencia(update, context)
         
         return ConversationHandler.END
 
-def mostrar_numeros_emergencia(update: Update, context: CallbackContext):
+async def mostrar_numeros_emergencia(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Muestra los números de emergencia"""
     mensaje_emergencia = """
 🚨 **NÚMEROS DE EMERGENCIA - CDMX** 🚨
@@ -221,9 +220,9 @@ def mostrar_numeros_emergencia(update: Update, context: CallbackContext):
     
     mensaje_emergencia += "\n💡 *Consejo:* Guarde estos números en su teléfono"
     
-    update.message.reply_text(mensaje_emergencia, parse_mode='Markdown')
+    await update.message.reply_text(mensaje_emergencia, parse_mode='Markdown')
 
-def iniciar_reporte(update: Update, context: CallbackContext):
+async def iniciar_reporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Inicia el proceso de reporte de socavón"""
     instrucciones_reporte = """
 📝 **REPORTE DE SOCAVÓN O SEÑAL DE PELIGRO**
@@ -245,10 +244,10 @@ Por favor envíe la siguiente información en UN solo mensaje:
 *⚠️ IMPORTANTE:* Manténgase a una distancia segura al reportar
 """
     
-    update.message.reply_text(instrucciones_reporte, parse_mode='Markdown')
+    await update.message.reply_text(instrucciones_reporte, parse_mode='Markdown')
     return REPORTANDO
 
-def procesar_reporte(update: Update, context: CallbackContext):
+async def procesar_reporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Procesa el reporte del usuario"""
     reporte = update.message.text
     
@@ -271,14 +270,14 @@ def procesar_reporte(update: Update, context: CallbackContext):
 - No intente cubrir el socavón
 """
     
-    update.message.reply_text(mensaje_confirmacion, parse_mode='Markdown')
+    await update.message.reply_text(mensaje_confirmacion, parse_mode='Markdown')
     return ConversationHandler.END
 
-def mostrar_informacion(update: Update, context: CallbackContext):
+async def mostrar_informacion(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Muestra información educativa sobre socavones"""
-    update.message.reply_text(informacion_socavones, parse_mode='Markdown')
+    await update.message.reply_text(informacion_socavones, parse_mode='Markdown')
 
-def mostrar_ayuda_inmediata(update: Update, context: CallbackContext):
+async def mostrar_ayuda_inmediata(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Muestra guía de acción rápida"""
     guia_emergencia = """
 🆘 **ACCIÓN INMEDIATA - SOCAVÓN DETECTADO**
@@ -304,32 +303,32 @@ def mostrar_ayuda_inmediata(update: Update, context: CallbackContext):
 *📞 EMERGENCIAS: 911*
 """
     
-    update.message.reply_text(guia_emergencia, parse_mode='Markdown')
+    await update.message.reply_text(guia_emergencia, parse_mode='Markdown')
 
-def cancelar_operacion(update: Update, context: CallbackContext):
+async def cancelar_operacion(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Cancela cualquier operación en curso"""
-    update.message.reply_text(
+    await update.message.reply_text(
         '🛑 Operación cancelada.\n\n'
         'Use el menú para seleccionar otra opción.'
     )
     return ConversationHandler.END
 
-def manejar_mensaje_general(update: Update, context: CallbackContext):
+async def manejar_mensaje_general(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Maneja los mensajes del menú principal"""
     texto = update.message.text
     
     if texto == '📊 Calcular Riesgo':
-        return iniciar_calculo_riesgo(update, context)
+        return await iniciar_calculo_riesgo(update, context)
     elif texto == '📞 Números Emergencia':
-        return mostrar_numeros_emergencia(update, context)
+        return await mostrar_numeros_emergencia(update, context)
     elif texto == '📝 Reportar Socavón':
-        return iniciar_reporte(update, context)
+        return await iniciar_reporte(update, context)
     elif texto == 'ℹ️ Info Socavones':
-        return mostrar_informacion(update, context)
+        return await mostrar_informacion(update, context)
     elif texto == '🆘 Ayuda Inmediata':
-        return mostrar_ayuda_inmediata(update, context)
+        return await mostrar_ayuda_inmediata(update, context)
     else:
-        update.message.reply_text(
+        await update.message.reply_text(
             'ℹ️ Por favor use los botones del menú para interactuar con el bot.'
         )
 
@@ -344,18 +343,17 @@ def main():
         logger.info("💡 Asegúrate de configurar la variable BOT_TOKEN en Render.com")
         return
     
-    # Crear el updater y dispatcher (versión 13.x)
-    updater = Updater(token_bot, use_context=True)
-    dispatcher = updater.dispatcher
+    # Crear la aplicación del bot (v20.x)
+    application = Application.builder().token(token_bot).build()
     
     # Configurar manejadores de conversación para cálculo de riesgo
     conversacion_riesgo = ConversationHandler(
         entry_points=[
-            MessageHandler(Filters.text & Filters.regex('^📊 Calcular Riesgo$'), iniciar_calculo_riesgo)
+            MessageHandler(filters.Text(['📊 Calcular Riesgo']), iniciar_calculo_riesgo)
         ],
         states={
             CALCULANDO_RIESGO: [
-                MessageHandler(Filters.text & ~Filters.command, procesar_respuesta_riesgo)
+                MessageHandler(filters.TEXT & ~filters.COMMAND, procesar_respuesta_riesgo)
             ]
         },
         fallbacks=[CommandHandler('cancelar', cancelar_operacion)]
@@ -364,29 +362,27 @@ def main():
     # Configurar manejadores de conversación para reportes
     conversacion_reporte = ConversationHandler(
         entry_points=[
-            MessageHandler(Filters.text & Filters.regex('^📝 Reportar Socavón$'), iniciar_reporte)
+            MessageHandler(filters.Text(['📝 Reportar Socavón']), iniciar_reporte)
         ],
         states={
             REPORTANDO: [
-                MessageHandler(Filters.text & ~Filters.command, procesar_reporte)
+                MessageHandler(filters.TEXT & ~filters.COMMAND, procesar_reporte)
             ]
         },
         fallbacks=[CommandHandler('cancelar', cancelar_operacion)]
     )
     
     # Registrar todos los manejadores
-    dispatcher.add_handler(CommandHandler("start", comando_inicio))
-    dispatcher.add_handler(CommandHandler("inicio", comando_inicio))
-    dispatcher.add_handler(conversacion_riesgo)
-    dispatcher.add_handler(conversacion_reporte)
-    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, manejar_mensaje_general))
+    application.add_handler(CommandHandler("start", comando_inicio))
+    application.add_handler(CommandHandler("inicio", comando_inicio))
+    application.add_handler(conversacion_riesgo)
+    application.add_handler(conversacion_reporte)
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, manejar_mensaje_general))
     
     # Iniciar el bot
     logger.info("🤖 Bot de Alertas de Socavones iniciado correctamente")
     logger.info("📡 Escuchando mensajes...")
-    
-    updater.start_polling()
-    updater.idle()
+    application.run_polling()
 
 if __name__ == '__main__':
     main()
